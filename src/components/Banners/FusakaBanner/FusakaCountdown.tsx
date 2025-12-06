@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import humanizeDuration from "humanize-duration"
-import { useLocale, useTranslations } from "next-intl"
+import { useLocale } from "next-intl"
 
 const fusakaDate = new Date("2025-12-03T21:49:11.000Z")
 const fusakaDateTime = fusakaDate.getTime()
@@ -108,9 +108,8 @@ const getTimeLabels = (locale: string): TimeLabels => {
   }
 }
 
-const FusakaCountdown = () => {
+const FusakaCountdown = ({ liveNowText }: { liveNowText: string }) => {
   const locale = useLocale()
-  const t = useTranslations("page-index")
   const [timeUnits, setTimeUnits] = useState<TimeUnits>(() => getTimeUnits())
   const [labels, setLabels] = useState<TimeLabels>(() => getTimeLabels(locale))
 
@@ -130,17 +129,17 @@ const FusakaCountdown = () => {
 
   if (timeUnits.isExpired) {
     return (
-      <p className="text-2xl font-extrabold text-white">
-        {t("page-index-fusaka-live-now")}
+      <p className="text-lg font-extrabold text-white md:text-2xl">
+        {liveNowText}
       </p>
     )
   }
 
   return (
-    <div className="flex items-center justify-center gap-4">
+    <div className="flex items-center justify-center gap-2 md:gap-4">
       {timeUnits.days > 0 && (
         <div className="flex flex-col items-center">
-          <p className="text-xl font-extrabold text-white md:text-3xl">
+          <p className="text-lg font-extrabold text-white md:text-3xl">
             {String(timeUnits.days).padStart(2, "0")}
           </p>
           <p className="text-xs font-bold uppercase text-white">
@@ -149,13 +148,13 @@ const FusakaCountdown = () => {
         </div>
       )}
       <div className="flex flex-col items-center">
-        <p className="text-xl font-extrabold text-white md:text-3xl">
+        <p className="text-lg font-extrabold text-white md:text-3xl">
           {String(timeUnits.hours).padStart(2, "0")}
         </p>
         <p className="text-xs font-bold uppercase text-white">{labels.hours}</p>
       </div>
       <div className="flex flex-col items-center">
-        <p className="text-xl font-extrabold text-white md:text-3xl">
+        <p className="text-lg font-extrabold text-white md:text-3xl">
           {String(timeUnits.minutes).padStart(2, "0")}
         </p>
         <p className="text-xs font-bold uppercase text-white">
@@ -164,7 +163,7 @@ const FusakaCountdown = () => {
       </div>
       {timeUnits.seconds !== null && (
         <div className="flex flex-col items-center">
-          <p className="text-xl font-extrabold text-white md:text-3xl">
+          <p className="text-lg font-extrabold text-white md:text-3xl">
             {String(timeUnits.seconds).padStart(2, "0")}
           </p>
           <p className="text-xs font-bold uppercase text-white">
