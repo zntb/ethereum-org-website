@@ -1430,6 +1430,84 @@ function syncProtectedFrontmatterFields(
 }
 
 /**
+ * Sync non-translatable fields (toId, isSecondary) in the buttons frontmatter
+ * array from the English source. The 'content' field is translatable and preserved.
+ * Addresses the gap noted in syncProtectedFrontmatterFields (line 1217 comment).
+ */
+function syncButtonsFrontmatterFields(
+  translatedMd: string,
+  englishMd: string
+): { content: string; fixCount: number } {
+  let fixCount = 0
+
+  const frontmatterRe = /^---\n([\s\S]*?)\n---/
+  const transMatch = translatedMd.match(frontmatterRe)
+  const engMatch = englishMd.match(frontmatterRe)
+
+  if (!transMatch || !engMatch) return { content: translatedMd, fixCount }
+
+  const transFm = transMatch[1]
+  const engFm = engMatch[1]
+
+  const protectedButtonFields = ["toId", "isSecondary"]
+
+  // Collect English values for each protected field (in order of appearance)
+  const engValuesMap: Record<string, string[]> = {}
+  for (const field of protectedButtonFields) {
+    engValuesMap[field] = []
+    const re = new RegExp(`^\\s+${field}:\\s*(.+)$`, "gm")
+    let m: RegExpExecArray | null
+    while ((m = re.exec(engFm)) !== null) {
+      engValuesMap[field].push(m[1].trim())
+    }
+  }
+
+  // Track occurrence index per field
+  const fieldIdx: Record<string, number> = {}
+  for (const field of protectedButtonFields) {
+    fieldIdx[field] = 0
+  }
+
+  // Process translated frontmatter line by line
+  const lines = transFm.split("\n")
+  for (let i = 0; i < lines.length; i++) {
+    for (const field of protectedButtonFields) {
+      const lineRe = new RegExp(`^(\\s+${field}:\\s*)(.+)$`)
+      const lineMatch = lines[i].match(lineRe)
+      if (!lineMatch) continue
+
+      const idx = fieldIdx[field]
+      const engValues = engValuesMap[field]
+      if (idx >= engValues.length) break
+
+      const transValue = lineMatch[2].trim()
+      const engValue = engValues[idx]
+
+      // Strip quotes for comparison
+      const cleanTrans = transValue.replace(/^["']|["']$/g, "")
+      const cleanEng = engValue.replace(/^["']|["']$/g, "")
+
+      if (cleanTrans !== cleanEng) {
+        lines[i] = `${lineMatch[1]}${engValue}`
+        fixCount++
+      }
+
+      fieldIdx[field]++
+    }
+  }
+
+  if (fixCount > 0) {
+    const newFm = lines.join("\n")
+    return {
+      content: translatedMd.replace(frontmatterRe, `---\n${newFm}\n---`),
+      fixCount,
+    }
+  }
+
+  return { content: translatedMd, fixCount }
+}
+
+/**
  * Fix ASCII guillemets (<< and >>) to proper Unicode guillemets (« and »).
  * Prevents MDX parsing errors from malformed angle bracket sequences.
  * IMPORTANT: Skips code blocks where << and >> are valid bit-shift operators.
@@ -1910,6 +1988,101 @@ function fixJunkAfterHeadingAnchors(content: string): {
   }
 
   return { content: parts.join(""), fixCount }
+}
+
+/**
+ * Fix non-ASCII characters inside heading anchor IDs.
+ * MDX heading IDs ({#some-id}) must be ASCII or acorn parsing breaks.
+ * This can happen when transliteration scripts or Crowdin replace
+ * English words inside anchor IDs with native-script equivalents.
+ *
+ * Example: {#Communities-and-डीएओज़} → strips non-ASCII segments
+ *
+ * This is a safety net; the transliterate script also protects {#...}.
+ */
+function fixNonAsciiHeadingIds(
+  content: string,
+  englishContent?: string
+): { content: string; fixCount: number; fixes: string[] } {
+  let fixCount = 0
+  const fixes: string[] = []
+
+  // Build a map of English heading IDs by position for restoration
+  const englishIds: string[] = []
+  if (englishContent) {
+    const idPattern = /^#{1,6}\s+.*?\{#([\w-]+)\}/gm
+    let m
+    while ((m = idPattern.exec(englishContent)) !== null) {
+      englishIds.push(m[1])
+    }
+  }
+
+  let translatedIdx = 0
+  // eslint-disable-next-line no-control-regex
+  content = content.replace(
+    /^(#{1,6}\s+.*?)\{#([^}]+)\}/gm,
+    (match, prefix, id) => {
+      const currentIdx = translatedIdx++
+      // Check if the ID contains non-ASCII characters
+      // eslint-disable-next-line no-control-regex
+      if (/[^\x00-\x7F]/.test(id)) {
+        // Prefer English source ID if available
+        if (englishIds[currentIdx]) {
+          fixCount++
+          fixes.push(`{#${id}} -> {#${englishIds[currentIdx]}}`)
+          return `${prefix}{#${englishIds[currentIdx]}}`
+        }
+        // Fallback: strip non-ASCII segments and clean up
+        const asciiOnly = id
+          .replace(/[^\u0020-\u007E]+/g, "")
+          .replace(/-{2,}/g, "-")
+          .replace(/^-|-$/g, "")
+        if (asciiOnly) {
+          fixCount++
+          fixes.push(`{#${id}} -> {#${asciiOnly}}`)
+          return `${prefix}{#${asciiOnly}}`
+        }
+      }
+      return match
+    }
+  )
+
+  return { content, fixCount, fixes }
+}
+
+/**
+ * Fix Crowdin JSX/markdown hybrid mangling.
+ * Crowdin sometimes converts JSX components with href attributes into
+ * a broken hybrid of markdown link syntax and JSX:
+ *   [<ButtonLink href="](/path)">  (broken)
+ *   <ButtonLink href="/path">      (correct)
+ *
+ * This happens with any JSX component that has an href attribute.
+ */
+function fixJsxMarkdownHybrids(content: string): {
+  content: string
+  fixCount: number
+  fixes: string[]
+} {
+  let fixCount = 0
+  const fixes: string[] = []
+
+  // Pattern: [<ComponentName href="](url-path)optional-tail">
+  // Captures: component name, any pre-href attrs, the split URL parts
+  content = content.replace(
+    /\[<([A-Z]\w+)(\s+[^>]*)?\s+href="?\]\(([^)]+)\)([^"]*)"?\s*>/g,
+    (_, component, preAttrs, urlPart, urlTail) => {
+      const href = urlPart + (urlTail || "")
+      const attrs = preAttrs ? preAttrs.trim() + " " : ""
+      fixCount++
+      fixes.push(
+        `[<${component} href="](${urlPart})${urlTail}"> -> <${component} ${attrs}href="${href}">`
+      )
+      return `<${component} ${attrs}href="${href}">`
+    }
+  )
+
+  return { content, fixCount, fixes }
 }
 
 /**
@@ -2510,6 +2683,14 @@ function processMarkdownFile(
     (n) => `Removed ${n} junk text fragments after heading anchors`
   )
   applyFix(
+    () => fixNonAsciiHeadingIds(content, englishMd),
+    (n) => `Fixed ${n} non-ASCII heading anchor IDs`
+  )
+  applyFix(
+    () => fixJsxMarkdownHybrids(content),
+    (n) => `Fixed ${n} Crowdin JSX/markdown hybrid manglings`
+  )
+  applyFix(
     () => fixMissingClosingEmTag(content),
     (n) => `Fixed ${n} missing </em> closing tags`
   )
@@ -2600,6 +2781,11 @@ function processMarkdownFile(
     applyFix(
       () => syncProtectedFrontmatterFields(content, englishMd!),
       (n) => `Synced ${n} protected frontmatter fields from English`
+    )
+    applyFix(
+      () => syncButtonsFrontmatterFields(content, englishMd!),
+      (n) =>
+        `Synced ${n} buttons frontmatter fields (toId/isSecondary) from English`
     )
     applyFix(
       () => collapseInlineHtmlFromEnglish(content, englishMd!),
@@ -3126,6 +3312,7 @@ export const _testOnly = {
   fixBrandTags,
   fixProtectedBrandNames,
   syncProtectedFrontmatterFields,
+  syncButtonsFrontmatterFields,
   restoreBlankLinesFromEnglish,
   collapseInlineHtmlFromEnglish,
   fixMergedClosingTags,
@@ -3137,6 +3324,8 @@ export const _testOnly = {
   warnPunctuationOnlyHeadings,
   fixBackslashBeforeClosingTag,
   fixJunkAfterHeadingAnchors,
+  fixNonAsciiHeadingIds,
+  fixJsxMarkdownHybrids,
   fixBacktickWrappedLinks,
   fixMissingLinkParentheses,
   fixMissingClosingEmTag,
