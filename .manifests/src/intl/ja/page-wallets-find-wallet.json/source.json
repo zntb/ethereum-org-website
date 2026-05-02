@@ -1,11 +1,11 @@
 {
   "version": 1,
   "sourceFile": "src/intl/en/page-wallets-find-wallet.json",
-  "generatedAt": "2026-04-30T20:53:29.558Z",
-  "rootHash": "4cf44ce23966",
+  "generatedAt": "2026-05-01T17:06:08.605Z",
+  "rootHash": "9fe49b58e802",
   "tree": {
-    "contentHash": "052f37c1b3d2",
-    "anchorHash": "cb2a96a449a4",
+    "contentHash": "666a7264298b",
+    "anchorHash": "f99d57092e14",
     "children": {
       "page-find-wallet-clear": {
         "contentHash": "7179ea0035fc",
@@ -28,11 +28,11 @@
         "anchorHash": "e3b0c44298fc"
       },
       "page-find-wallet-meta-description": {
-        "contentHash": "fe3e5e681286",
+        "contentHash": "1f3c795f2c85",
         "anchorHash": "e3b0c44298fc"
       },
       "page-find-wallet-meta-title": {
-        "contentHash": "8d806fddb031",
+        "contentHash": "9748cdae7ea9",
         "anchorHash": "e3b0c44298fc"
       },
       "page-find-wallet-title": {
@@ -384,6 +384,22 @@
         "contentHash": "7968aebf1133",
         "anchorHash": "e3b0c44298fc"
       },
+      "page-find-wallet-smart-accounts": {
+        "contentHash": "13d7887a935f",
+        "anchorHash": "e3b0c44298fc"
+      },
+      "page-find-wallet-smart-accounts-desc": {
+        "contentHash": "c3fbfe0ff448",
+        "anchorHash": "e3b0c44298fc"
+      },
+      "page-find-wallet-account-upgrades": {
+        "contentHash": "bb189df817fc",
+        "anchorHash": "e3b0c44298fc"
+      },
+      "page-find-wallet-account-upgrades-desc": {
+        "contentHash": "85ca72879bfa",
+        "anchorHash": "e3b0c44298fc"
+      },
       "page-find-wallet-see-wallets": {
         "contentHash": "ea0ff8b64bbc",
         "anchorHash": "e3b0c44298fc"
@@ -533,6 +549,10 @@
       "page-find-wallet-empty-results-desc",
       "page-find-wallet-privacy",
       "page-find-wallet-privacy-desc",
+      "page-find-wallet-smart-accounts",
+      "page-find-wallet-smart-accounts-desc",
+      "page-find-wallet-account-upgrades",
+      "page-find-wallet-account-upgrades-desc",
       "page-find-wallet-see-wallets",
       "page-find-wallet-search-languages",
       "page-find-wallet-methodology-title",
@@ -550,5 +570,5 @@
       "page-find-wallet-methodology-filters"
     ]
   },
-  "sourceCommitSha": "7f6aa63d6684192e895001b8c8b0141b10156638"
+  "sourceCommitSha": "102e7d69213329505b9595dbf50a235b7e6c2a9d"
 }
