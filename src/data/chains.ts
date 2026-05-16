@@ -1031,7 +1031,7 @@ const chains = [
       symbol: "ETH",
       decimals: 18,
     },
-    chain: "ETH",
+    chain: "MegaETH",
   },
   {
     name: "OEV Network",
